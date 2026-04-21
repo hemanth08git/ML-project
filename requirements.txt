@@ -1,0 +1,8 @@
+flask
+joblib
+scikit-learn==1.6.1
+lightgbm
+pandas
+numpy
+matplotlib
+boto3

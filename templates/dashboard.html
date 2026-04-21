@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#12121f;color:#e0e0e0;min-height:100vh}
+nav{background:#1e1e2f;border-bottom:1px solid #2e2e45;padding:.8rem 2rem;display:flex;gap:1rem;align-items:center}
+nav a{color:#aaa;text-decoration:none;font-size:.9rem;padding:.4rem .8rem;border-radius:6px;transition:.2s}
+nav a:hover,nav a.active{color:#fff;background:rgba(255,255,255,.08)}
+nav .logo{font-weight:700;color:#7c83fd;margin-right:auto}
+.wrapper{max-width:1400px;margin:0 auto;padding:2rem}
+h1{font-size:1.7rem;margin-bottom:.3rem}
+p.sub{color:#888;margin-bottom:2rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem}
+.stat-card{background:#1e1e2f;border:1px solid #2e2e45;border-radius:12px;padding:1.2rem 1.4rem}
+.stat-card .lbl{font-size:.73rem;text-transform:uppercase;letter-spacing:.7px;color:#888}
+.stat-card .val{font-size:1.9rem;font-weight:700;margin-top:.3rem}
+.stat-card .s{font-size:.78rem;color:#666;margin-top:.2rem}
+.blue .val{color:#7c83fd}.pink .val{color:#fc5c7d}.green .val{color:#43e97b}.orange .val{color:#f7971e}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:1.5rem}
+.chart-card{background:#1e1e2f;border:1px solid #2e2e45;border-radius:14px;padding:1.4rem}
+.chart-card.wide{grid-column:1/-1}
+.chart-card h3{font-size:.95rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.wrap{min-height:260px;display:flex;align-items:center;justify-content:center}
+.wrap img{width:100%;border-radius:8px}
+.spin{width:28px;height:28px;border:3px solid #2e2e45;border-top-color:#7c83fd;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{color:#fc5c7d;font-size:.83rem}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">🚗 CrashML</span>
+  <a href="/">Home</a>
+  <a href="/showsc">Predict</a>
+  
+  <a href="/dashboard" class="active">Dashboard</a>
+  <a href="/explorer">Data Explorer</a>
+  
+  <a href="/s3">☁️ S3</a>
+</nav>
+<div class="wrapper">
+  <h1>📊 Analytics Dashboard</h1>
+  <p class="sub">Visual insights from the Traffic Crash dataset</p>
+
+  <div class="stats">
+    <div class="stat-card blue"><div class="lbl">Total Records</div><div class="val">{{ stats.total | default(0) | int }}</div><div class="s">in dataset sample</div></div>
+    <div class="stat-card pink"><div class="lbl">Injured Cases</div><div class="val">{{ stats.injured | default(0) | int }}</div><div class="s">in dataset sample</div></div>
+    <div class="stat-card green"><div class="lbl">Injury Rate</div><div class="val">{{ stats.injury_rate | default(0) }}%</div><div class="s">overall rate</div></div>
+    <div class="stat-card orange"><div class="lbl">Top Weather Risk</div><div class="val" style="font-size:1rem">{{ stats.top_weather | default('N/A') }}</div><div class="s">most injuries</div></div>
+    <div class="stat-card blue"><div class="lbl">Top Road Risk</div><div class="val" style="font-size:1rem">{{ stats.top_road | default('N/A') }}</div><div class="s">most injuries</div></div>
+    <div class="stat-card pink"><div class="lbl">Model</div><div class="val" style="font-size:1rem">LightGBM</div><div class="s">+ DT + RF</div></div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-card wide"><h3>🌦️ Crashes by Weather</h3><div class="wrap" id="w1"><div class="spin"></div></div></div>
+    <div class="chart-card"><h3>👤 Age Distribution</h3><div class="wrap" id="w2"><div class="spin"></div></div></div>
+    <div class="chart-card"><h3>💡 Injury by Lighting</h3><div class="wrap" id="w3"><div class="spin"></div></div></div>
+    <div class="chart-card"><h3>👥 Injury by Person Type</h3><div class="wrap" id="w4"><div class="spin"></div></div></div>
+    <div class="chart-card"><h3>📅 Crashes by Day of Week</h3><div class="wrap" id="w5"><div class="spin"></div></div></div>
+    <div class="chart-card"><h3>📆 Crashes by Month</h3><div class="wrap" id="w6"><div class="spin"></div></div></div>
+    <div class="chart-card"><h3>🚙 Vehicle Types</h3><div class="wrap" id="w7"><div class="spin"></div></div></div>
+    <div class="chart-card"><h3>🎯 Injury by First Contact</h3><div class="wrap" id="w8"><div class="spin"></div></div></div>
+    <div class="chart-card wide"><h3>🛣️ Crash Outcomes by Road Surface</h3><div class="wrap" id="w9"><div class="spin"></div></div></div>
+  </div>
+</div>
+
+<script>
+async function loadChart(url, id){
+  try{
+    const r = await fetch(url);
+    const d = await res.json();
+    const el = document.getElementById(id);
+    if(d.image) el.innerHTML=`<img src="data:image/png;base64,${d.image}">`;
+    else el.innerHTML=`<div class="err">⚠️ ${d.error||'No data'}</div>`;
+  }catch(e){
+    document.getElementById(id).innerHTML='<div class="err">⚠️ Failed to load</div>';
+  }
+}
+
+const charts = [
+  ['/api/chart/weather','w1'],['/api/chart/age','w2'],
+  ['/api/chart/lighting','w3'],['/api/chart/person','w4'],
+  ['/api/chart/dayofweek','w5'],['/api/chart/month','w6'],
+  ['/api/chart/vehicle','w7'],['/api/chart/contact','w8'],
+  ['/api/chart/road','w9'],
+];
+
+async function loadChart(url, id){
+  try{
+    const r = await fetch(url);
+    const d = await r.json();
+    const el = document.getElementById(id);
+    if(d.image) el.innerHTML=`<img src="data:image/png;base64,${d.image}">`;
+    else el.innerHTML=`<div class="err">⚠️ ${d.error||'No data'}</div>`;
+  }catch(e){
+    document.getElementById(id).innerHTML='<div class="err">⚠️ Failed to load</div>';
+  }
+}
+
+charts.forEach(([url,id])=>loadChart(url,id));
+</script>
+</body>
+</html>

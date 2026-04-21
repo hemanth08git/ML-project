@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Predict</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:0 0 2rem}
+nav{background:rgba(255,255,255,0.12);padding:.9rem 2rem;display:flex;gap:1rem;align-items:center;margin-bottom:1.5rem}
+nav a{color:#fff;text-decoration:none;font-size:.9rem;padding:.4rem .9rem;border-radius:6px;transition:.2s}
+nav a:hover,nav a.active{background:rgba(255,255,255,.2)}
+nav .logo{font-weight:700;margin-right:auto}
+.container{max-width:1100px;margin:0 auto;padding:0 1rem}
+.header{text-align:center;color:#fff;margin-bottom:1.5rem}
+.header h1{font-size:2rem;text-shadow:2px 2px 4px rgba(0,0,0,.3)}
+.card{background:rgba(255,255,255,.97);border-radius:18px;padding:1.8rem;box-shadow:0 12px 30px rgba(0,0,0,.2);margin-bottom:1.2rem}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;margin-bottom:1.2rem}
+.fg{display:flex;flex-direction:column;gap:.3rem}
+.fg label{font-weight:600;font-size:.85rem;color:#555}
+.fg select,.fg input{padding:.7rem;border:2px solid #e1e5e9;border-radius:9px;font-size:.9rem;background:#fff;transition:.2s}
+.fg select:focus,.fg input:focus{outline:none;border-color:#667eea}
+.btn-row{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center}
+.btn{padding:.7rem 1.5rem;border-radius:25px;border:none;cursor:pointer;font-size:.92rem;font-weight:700;text-decoration:none;transition:.2s;display:inline-flex;align-items:center;gap:.4rem}
+.btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,0,0,.15)}
+.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.btn-danger{background:linear-gradient(135deg,#fc5c7d,#6a3093);color:#fff}
+.btn-outline{background:#fff;border:2px solid #667eea;color:#667eea}
+
+/* All 3 model results */
+.results-section{margin-top:1.2rem}
+.results-section h2{color:#fff;text-align:center;margin-bottom:1rem;font-size:1.3rem}
+.model-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+.model-card{background:rgba(255,255,255,.97);border-radius:16px;padding:1.4rem;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.15);position:relative;animation:fadeIn .5s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.model-card.best{border:3px solid #f7971e;box-shadow:0 8px 25px rgba(247,151,30,.3)}
+.model-card .badge-best{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#f7971e;color:#fff;font-size:.72rem;font-weight:700;padding:.25rem .8rem;border-radius:10px;white-space:nowrap}
+.model-name{font-size:.85rem;color:#888;font-weight:600;margin-bottom:.5rem}
+.model-info{font-size:.75rem;color:#bbb;margin-bottom:.7rem}
+.model-result{font-size:1.5rem;font-weight:800;margin:.5rem 0}
+.injured{color:#e74c3c}.noinjury{color:#27ae60}
+.risk-badge{display:inline-block;padding:.3rem .9rem;border-radius:15px;font-size:.8rem;font-weight:700;margin:.4rem 0}
+.HIGH{background:#ffe0e0;color:#c0392b}
+.MEDIUM{background:#fff3e0;color:#e67e22}
+.LOW{background:#e0ffe0;color:#27ae60}
+.conf-bar{height:8px;background:#eee;border-radius:10px;margin:.6rem 0;overflow:hidden}
+.conf-fill{height:100%;border-radius:10px}
+.fill-0{background:linear-gradient(90deg,#7c83fd,#5a62f5)}
+.fill-1{background:linear-gradient(90deg,#f7971e,#ffd200)}
+.fill-2{background:linear-gradient(90deg,#43e97b,#38f9d7)}
+.conf-text{font-size:.8rem;color:#888}
+
+/* History */
+.history-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.history-table th{background:#667eea;color:#fff;padding:.6rem .8rem;text-align:left}
+.history-table td{padding:.5rem .8rem;border-bottom:1px solid #eee}
+.history-table tr:hover{background:#f8f9ff}
+.hb{display:inline-block;padding:.2rem .5rem;border-radius:6px;font-size:.75rem;font-weight:600}
+.hb-inj{background:#ffe0e0;color:#c0392b}.hb-no{background:#e0ffe0;color:#27ae60}
+.hb-H{background:#e74c3c;color:#fff}.hb-M{background:#e67e22;color:#fff}.hb-L{background:#27ae60;color:#fff}
+
+#loading{display:none;text-align:center;padding:2rem;color:#fff}
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">🚗 CrashML</span>
+  <a href="/">Home</a>
+  <a href="/showsc" class="active">Predict</a>
+  <a href="/dashboard">Dashboard</a>
+  <a href="/explorer">Data Explorer</a>
+  <a href="/s3">☁️ S3</a>
+</nav>
+
+<div class="container">
+  <div class="header">
+    <h1>🔮 Crash Injury Predictor</h1>
+    
+  </div>
+
+  <div class="card">
+    <form method="POST" action="/predictsc" onsubmit="document.getElementById('loading').style.display='block'">
+      <div class="form-grid">
+        <div class="fg"><label>Weather Condition</label>
+          <select name="weather" required><option value="">Select</option>
+          {% for i in WEATHER_CONDITION %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Lighting Condition</label>
+          <select name="lighting" required><option value="">Select</option>
+          {% for i in LIGHTING_CONDITION %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Road Surface</label>
+          <select name="road_surface" required><option value="">Select</option>
+          {% for i in ROADWAY_SURFACE_COND %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Person Type</label>
+          <select name="person_type" required><option value="">Select</option>
+          {% for i in PERSON_TYPE %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Sex</label>
+          <select name="sex" required><option value="">Select</option>
+          {% for i in SEX %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Age</label>
+          <input type="number" name="age" min="1" max="120" placeholder="e.g. 30" required></div>
+        <div class="fg"><label>Airbag Deployed</label>
+          <select name="airbag" required><option value="">Select</option>
+          {% for i in AIRBAG_DEPLOYED %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Vehicle Make</label>
+          <select name="make" required><option value="">Select</option>
+          {% for i in MAKE %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Vehicle Model</label>
+          <select name="model" required><option value="">Select</option>
+          {% for i in MODEL %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Vehicle Year</label>
+          <input type="number" name="vehicle_year" min="1990" max="2026" placeholder="e.g. 2020" required></div>
+        <div class="fg"><label>Vehicle Type</label>
+          <select name="vehicle_type" required><option value="">Select</option>
+          {% for i in VEHICLE_TYPE %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>First Contact Point</label>
+          <select name="first_contact" required><option value="">Select</option>
+          {% for i in FIRST_CONTACT_POINT %}<option value="{{i}}">{{i}}</option>{% endfor %}</select></div>
+        <div class="fg"><label>Crash Date</label>
+          <input type="date" name="crash_date" value="2020-01-12" required></div>
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">🔮 Predict</button>
+        <button type="reset" class="btn btn-danger">🔄 Reset</button>
+        <a href="/dashboard" class="btn btn-outline">📊 Dashboard</a>
+      </div>
+    </form>
+  </div>
+
+  <div id="loading"><div class="spinner"></div><p>Running all 3 models on your data…</p></div>
+
+  {% if all_results %}
+  <div class="results-section">
+    <h2>📊 Predictions</h2>
+    <div class="model-grid">
+      {% for r in all_results %}
+      {% set is_best = loop.index0 == 0 %}
+      <div class="model-card {{ 'best' if is_best }}">
+        {% if is_best %}<div class="badge-best">⭐ Main Model</div>{% endif %}
+        <div class="model-name">{{ r.name }}</div>
+        <div class="model-info">{{ r.features }} features · {{ r.trained_on }}</div>
+        <div class="model-result {{ 'injured' if r.result == 'Injured' else 'noinjury' }}">
+          {{ '⚠️ Injured' if r.result == 'Injured' else '✅ No Injury' }}
+        </div>
+        <div class="risk-badge {{ r.risk }}">{{ r.risk }} RISK</div>
+        <div class="conf-bar"><div class="conf-fill fill-{{ loop.index0 }}" style="width:{{ r.conf }}%"></div></div>
+        <div class="conf-text">Confidence: {{ r.conf }}% &nbsp;|&nbsp; Probability: {{ r.proba }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if history %}
+  <div class="card" style="margin-top:1.2rem">
+    <h3 style="margin-bottom:1rem;color:#555">🕐 Prediction History (Last 10)</h3>
+    <div style="overflow-x:auto">
+    <table class="history-table">
+      <thead><tr><th>Time</th><th>Weather</th><th>Person</th><th>Age</th><th>Result</th><th>Confidence</th><th>Risk</th></tr></thead>
+      <tbody>
+      {% for h in history %}
+      <tr>
+        <td>{{h.time}}</td><td>{{h.weather}}</td><td>{{h.person}}</td><td>{{h.age}}</td>
+        <td><span class="hb {{ 'hb-inj' if h.result=='Injured' else 'hb-no' }}">{{h.result}}</span></td>
+        <td>{{h.conf}}%</td>
+        <td><span class="hb hb-{{h.risk[0]}}">{{h.risk}}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>

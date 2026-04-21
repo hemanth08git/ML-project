@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Data Explorer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1e1e2f,#2d2d44);min-height:100vh;color:#e0e0e0}
+nav{background:rgba(255,255,255,0.05);padding:.8rem 2rem;display:flex;gap:1rem;align-items:center;border-bottom:1px solid #333}
+nav a{color:#aaa;text-decoration:none;font-size:.9rem;padding:.4rem .8rem;border-radius:6px;transition:.2s}
+nav a:hover,nav a.active{color:#fff;background:rgba(255,255,255,.1)}
+nav .logo{font-weight:700;color:#7c83fd;margin-right:auto}
+.wrapper{max-width:1200px;margin:0 auto;padding:2rem}
+h1{font-size:1.8rem;margin-bottom:.4rem}
+p.sub{color:#888;margin-bottom:2rem}
+.card{background:#1e1e2f;border:1px solid #2e2e45;border-radius:14px;padding:1.5rem;margin-bottom:1.5rem}
+.filters{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.2rem}
+.fg{display:flex;flex-direction:column;gap:.4rem;min-width:180px}
+.fg label{font-size:.82rem;color:#aaa}
+.fg select{background:#12121f;border:1px solid #333;color:#e0e0e0;padding:.6rem;border-radius:8px;font-size:.88rem}
+.fg select:focus{outline:none;border-color:#7c83fd}
+.btn{padding:.65rem 1.4rem;border-radius:8px;border:none;cursor:pointer;font-weight:600;transition:.2s;font-size:.9rem}
+.btn-primary{background:linear-gradient(135deg,#7c83fd,#5a62f5);color:#fff}
+.btn:hover{opacity:.85}
+.stats-bar{display:flex;gap:1.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.stat{background:#12121f;border-radius:8px;padding:.6rem 1rem;font-size:.85rem}
+.stat span{color:#7c83fd;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead th{background:#12121f;color:#7c83fd;padding:.7rem .8rem;text-align:left;position:sticky;top:0}
+tbody td{padding:.55rem .8rem;border-bottom:1px solid #2e2e45;color:#ccc}
+tbody tr:hover{background:#12121f}
+.badge{display:inline-block;padding:.2rem .5rem;border-radius:6px;font-size:.75rem;font-weight:600}
+.b-no{background:#1a3a1a;color:#43e97b}
+.b-yes{background:#3a1a1a;color:#fc5c7d}
+.b-rep{background:#3a2a1a;color:#f7971e}
+.tscroll{overflow-x:auto;max-height:480px;overflow-y:auto}
+.spinner{width:30px;height:30px;border:3px solid #333;border-top-color:#7c83fd;border-radius:50%;animation:spin .8s linear infinite;margin:1.5rem auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">🚗 CrashML</span>
+  <a href="/">Home</a>
+  <a href="/showsc">Predict</a>
+  
+  <a href="/dashboard">Dashboard</a>
+  <a href="/explorer" class="active">Data Explorer</a>
+  
+  <a href="/s3">☁️ S3</a>
+</nav>
+<div class="wrapper">
+  <h1>🔍 Data Explorer</h1>
+  <p class="sub">Browse and filter the crash dataset</p>
+
+  <div class="card">
+    <div class="filters">
+      <div class="fg"><label>Weather Condition</label>
+        <select id="f-weather">
+          <option value="">All Weather</option>
+          {% for w in weather_opts %}<option value="{{w}}">{{w}}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fg"><label>Injury Classification</label>
+        <select id="f-injury">
+          <option value="">All Injuries</option>
+          <option value="NO INDICATION OF INJURY">No Injury</option>
+          <option value="NONINCAPACITATING INJURY">Non-Incapacitating</option>
+          <option value="REPORTED, NOT EVIDENT">Reported Not Evident</option>
+          <option value="INCAPACITATING INJURY">Incapacitating</option>
+          <option value="FATAL">Fatal</option>
+        </select>
+      </div>
+      <div class="fg"><label>Person Type</label>
+        <select id="f-person">
+          <option value="">All Persons</option>
+          <option value="DRIVER">Driver</option>
+          <option value="PASSENGER">Passenger</option>
+          <option value="PEDESTRIAN">Pedestrian</option>
+          <option value="BICYCLE">Bicycle</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="loadData()">🔍 Filter</button>
+    </div>
+
+    <div class="stats-bar" id="stats-bar"></div>
+
+    <div id="loading" style="display:none"><div class="spinner"></div></div>
+    <div class="tscroll"><table id="data-table">
+      <thead id="thead"></thead>
+      <tbody id="tbody"><tr><td colspan="8" style="text-align:center;color:#666;padding:2rem">Click Filter to load data</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<script>
+const injuryClass = {
+  'NO INDICATION OF INJURY':'b-no',
+  'NONINCAPACITATING INJURY':'b-rep',
+  'REPORTED, NOT EVIDENT':'b-rep',
+  'INCAPACITATING INJURY':'b-yes',
+  'FATAL':'b-yes'
+};
+
+async function loadData(){
+  document.getElementById('loading').style.display='block';
+  document.getElementById('tbody').innerHTML='';
+  const w = document.getElementById('f-weather').value;
+  const inj = document.getElementById('f-injury').value;
+  const p = document.getElementById('f-person').value;
+  const res = await fetch(`/api/explorer?weather=${encodeURIComponent(w)}&injury=${encodeURIComponent(inj)}&person=${encodeURIComponent(p)}`);
+  const data = await res.json();
+  document.getElementById('loading').style.display='none';
+
+  document.getElementById('stats-bar').innerHTML =
+    `<div class="stat">Total matching: <span>${data.total}</span></div>
+     <div class="stat">Showing: <span>${data.rows.length}</span> rows</div>`;
+
+  document.getElementById('thead').innerHTML =
+    '<tr>' + data.columns.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+
+  let html='';
+  data.rows.forEach(row=>{
+    html+='<tr>'+row.map((val,i)=>{
+      if(data.columns[i]==='INJURY_CLASSIFICATION'){
+        const cls=injuryClass[val]||'b-rep';
+        return `<td><span class="badge ${cls}">${val}</span></td>`;
+      }
+      return `<td>${val}</td>`;
+    }).join('')+'</tr>';
+  });
+  document.getElementById('tbody').innerHTML = html || '<tr><td colspan="8" style="text-align:center;color:#666;padding:1.5rem">No records found</td></tr>';
+}
+
+loadData();
+</script>
+</body>
+</html>
