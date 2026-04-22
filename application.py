@@ -287,7 +287,7 @@ def predict_all(form):
                     comp_encode('FIRST_CONTACT_POINT', contact)]
         sx = pd.DataFrame([comp_row], columns=COMP_FEAT)
 
-        for name, mdl in [('Decision Tree', DT_MODEL), ('Random Forest', RF_MODEL)]:
+        for name, mdl in [('XGBoost', DT_MODEL), ('Random Forest', RF_MODEL)]:
             p = float(mdl.predict_proba(sx)[0][1])
             results.append({'name': name, 'proba': round(p,4),
                             'result':'Injured' if p>=0.5 else 'No Injury',
